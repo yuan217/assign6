@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="./src/style.css">
+    <meta charset="utf-8">
+  </head>
+
+  <body >
+      <div id="app">
+          <nav class="container">
+              <h1 class="pull-left">獨立音樂活動清單</h1>
+
+              <div class="pull-right">
+                  <span v-if="data.currentUser" class="glyphicon glyphicon-plus" data-toggle="modal" data-target="#activityEditor" @click="editorCreateActivity()"></span>
+
+                  <span v-if="data.currentUser"><img :src="data.currentUser.photoURL" alt="" width="30" height="30"></span>
+                  <span v-if="data.currentUser" class="glyphicon glyphicon glyphicon-off" @click="logout()"></span>
+                  <span v-else class="glyphicon glyphicon-user" @click="login()"></span>
+
+              </div>
+          </nav>
+
+          <main class="container">
+              <div class="items">
+
+                  <article class="item" v-for="(activity ,activity_id) in data.activities">
+                      <header>
+                          <h1>{{activity.title}} </h1>
+                          <div v-if="data.currentUser" class="animation-swipe star" :class="{ favorite : data.favorites[activity_id]  } " @click="toggle_like(activity_id)">
+                            <span class="glyphicon glyphicon-star"></span>
+                          </div>
+                      </header>
+                      <dl>
+                          <dt>時間</dt>
+                          <dd>{{activity.time}}</dd>
+                      </dl>
+
+                      <dl>
+                          <dt>價錢</dt>
+                          <dd>{{activity.price}}</dd>
+                      </dl>
+
+                      <dl>
+                          <dt>地點</dt>
+                          <dd>{{activity.address}}</dd>
+                      </dl>
+                      <footer v-if="data.currentUser">
+                          <span class="bn glyphicon glyphicon-pencil" @click="editorEditActivity( activity_id , activity )"  data-toggle="modal" data-target="#activityEditor"></span>
+                          <span class="bn glyphicon glyphicon-remove" @click="removeActivity( activity_id )"></span>
+                      </footer>
+                  </article>
+              </div>
+          </main>
+
+          <footer class="container">
+              <span v-if="data.activities && data.activities.length" >{{total}}</span >
+              <span v-else>目前還沒有資料。</span >
+          </footer>
+
+
+
+
+          <div class="modal fade" id="activityEditor" tabindex="-1" role="dialog" aria-labelledby="activityEditorLabel" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title" id="activityEditorLabel">{{editor.activity.title}}</h5>
+                  <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                  </button>
+                </div>
+                <div class="modal-body">
+                    <form class="form-horizontal">
+                        <fieldset>
+                            <div class="form-group">
+                              <label class="col-md-4 control-label" for="title">活動名稱</label>
+                              <div class="col-md-4">
+                              <input id="title"  v-model="editor.activity.title" class="form-control input-md"  >
+                              </div>
+                            </div>
+
+                            <!-- Text input-->
+                            <div class="form-group">
+                              <label class="col-md-4 control-label" for="time">時間</label>
+                              <div class="col-md-4">
+                              <input id="time"  v-model="editor.activity.time" class="form-control input-md" >
+
+                              </div>
+                            </div>
+
+                            <!-- Text input-->
+                            <div class="form-group">
+                              <label class="col-md-4 control-label" for="address">地點</label>
+                              <div class="col-md-4">
+                              <input id="address" v-model="editor.activity.address"  class="form-control input-md" >
+
+                              </div>
+                            </div>
+
+                            <!-- Text input-->
+                            <div class="form-group">
+                              <label class="col-md-4 control-label" for="price">價錢</label>
+                              <div class="col-md-4">
+                              <input type="number" id="price" v-model="editor.activity.price" class="form-control input-md" >
+                              </div>
+                            </div>
+                        </fieldset>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                  <button type="button" class="btn btn-primary" @click="editorSave" >儲存</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+      </div>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
+
+    <script src="https://www.gstatic.com/firebasejs/4.0.0/firebase.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.2.6/vue.js"></script>
+    <script>
+
+        // ASN REQ 1 : replce all of  your config hrere
+            var config = {
+              apiKey: "AIzaSyCpTJvl1I2W1NZOx3dU1kbb79BPcm1NmrE",
+              authDomain: "assign6-f0138.firebaseapp.com",
+              databaseURL: "https://assign6-f0138.firebaseio.com",
+              projectId: "assign6-f0138",
+              storageBucket: "assign6-f0138.appspot.com",
+              messagingSenderId: "803038339120"
+            };
+        firebase.initializeApp(config);
+
+        var db             = firebase.database()                  // class : firebase.database
+        var rootRef        = db.ref()
+
+
+        var activitiesRef  = rootRef.child("activities")              // class : firebase.reference -> root.activity
+        var favoritesRef   = rootRef.child("favorites")
+
+        var errorCallback  = function (msg){  alert(msg.message) }
+
+        window.app = new Vue({
+
+            el : "#app",
+            data : {
+
+                data : {
+                    currentUser : null, // default is logout status
+                    favorites : {},
+                    activities : {}
+                },
+
+                control : {
+                    filter : "" ,
+                    sort : "" ,
+                    tab : "all" ,
+                },
+
+                editor : {
+                    activity : {},
+                    activity_id : "" ,
+                    isCreating : false
+                }
+
+            },
+
+            methods : {
+                login : function (){
+                    // ASN REQ 3 : merely singIn with fb here
+                    var provider = new firebase.auth.FacebookAuthProvider();
+                    firebase.auth().signInWithPopup(provider).catch(errorCallback)
+
+                },
+                logout : function (){
+                    // ASN REQ 3  : signOut here
+                    // Release favritesRef's value listener or just simply calling window.location.reload().
+                    firebase.auth().signOut()
+                },
+
+                // ASN REQ 2 HINT: the two methods `editorCreateActivity` , `editorEditActivity` are used to open editor.
+                // you does not need to modify it.
+                editorCreateActivity: function(){
+                    this.editor.activity_id = null
+                    this.editor.activity = {
+                        title   : "程式碼在唱歌 " + Math.ceil((Math.random()) * 200),
+                        time    : (new Date()).toLocaleString("zh-TW"),
+                        address : "大仁樓" + Math.ceil(100 +(Math.random()) * 300) + "室",
+                        price   : Math.ceil((Math.random()) * 20)*100
+                    }
+                },
+                editorEditActivity : function ( activity_id , activity ){
+                    this.editor.activity_id = activity_id
+                    this.editor.activity = activity
+                },
+
+                // ASN REQ 2 HINT : if `this.editor.activity_id` equals null , it means the editor is creating a new activity!!
+                editorSave : function (){
+
+                    if ( this.editor.activity_id === null){
+                        // ASN REQ 2 : this means we are creating new activity
+                        // you should use one of the functions `updateActivity or createActivity` below
+                        this.createActivity(this.editor.activity)
+
+                    }else {
+                        // ASN REQ 2 : this means we should UPDATE the activity whose id is `activity_id` , with this.editor.activity
+                        // you should use one of the functions `updateActivity or createActivity` below
+                        this.updateActivity(this.editor.activity_id,this.editor.activity)
+
+                    }
+                    $("#activityEditor").modal("hide")
+                },
+
+                toggle_like : function ( activity_id ){
+                    // ASN REQ 4 : update favoritesRef at `currentUser.uid ` at `activity_id` to true
+                    var val=this.data.favorites[activity_id] ?  false : true
+                    favoritesRef.child(this.data.currentUser.uid).child(activity_id).set(val).catch(errorCallback)
+
+                },
+
+                // C , R , D
+                createActivity : function ( new_activity ){
+                    // ASN REQ 2 : push new_activity to activitiesRef. Always handle error!
+                    activitiesRef.push(new_activity).catch(errorCallback)
+
+
+                },
+                updateActivity : function ( activity_id , activity ){
+                    // ASN REQ 2 : update activitiesRef at `activity_id` with data `activity`. Always handle error!
+                    activitiesRef.child(activity_id).update(activity).catch(errorCallback)
+
+                },
+                removeActivity : function ( activity_id ){
+                    // ASN REQ 2 : remove activity at `activity_id`. Always handle error!
+                    activitiesRef.child(activity_id).remove().catch(errorCallback)
+                    this.$delete(this.data.activities, activity_id)
+
+                }
+            },
+
+            created: function created() {
+              // ASN REQ 1 :
+              var vm=this;
+                  // listen on chages on activities data , and set it to vm.data.activities
+              activitiesRef.on('value',function(dataSnapshot){
+                dataSnapshot.forEach(function(dataSnapshot){
+                  var act = dataSnapshot.val()
+                  vm.$set( vm.data.activities , dataSnapshot.key , act )
+                })
+              })
+
+
+
+              // ASN REQ 3 : detect authentication changes :
+                  // if login :
+                      // set login user to vm.data.currentUser
+                      firebase.auth().onAuthStateChanged(function(user) {
+
+                      if (user){
+
+                        // save usr public data  (*1)
+                        var userData = user.toJSON();
+
+                        // update vue to login status
+                        vm.$set(vm.data, "currentUser" , userData )
+
+
+                        favoritesRef.child(userData.uid).on('value',function(dataSnapshot){
+                          console.log( dataSnapshot.val() )
+                          vm.$set( vm.data , "favorites" , dataSnapshot.val()  )
+                        })
+
+                      }else{
+                        // update vue to logout status
+                        vm.$set(vm.data, "currentUser" ,null)
+
+                      }
+                    })
+                      // ASN REQ 4 :
+                      // listen on chages on favorite data of currentUser , and set it to vm.data.currentUser
+
+
+
+                  // else : not login : set vm.data.currentUser to null
+
+
+            }
+        })
+
+    </script>
+
+  </body>
+</html>

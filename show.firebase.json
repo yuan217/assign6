@@ -1,0 +1,22 @@
+{"activities" :
+    {"58c85240cc4670997d455bb3":{
+        "title":"The 10th Saturday Taiwan Tour 高雄場 ",
+        "time":"2017/04/21 19:30:00",
+        "price":300,
+        "address":"高雄市三民區民族一路70號"},
+    "58b33a57cc461430649284b2":{
+        "title":"Dreamtale 台北演唱會 2017",
+        "time":"2017/04/22 19:30:00",
+        "price":200,
+        "address":"臺北市萬華區昆明街76號B1"},
+    "58c5e8570f07ce84ff45e8c4":{
+        "title":"致 一切美好的可能｜巡迴演唱會",
+        "time":"2017/04/22 20:00:00",
+        "price":400,
+        "address":"臺北市西寧南路177號"}
+    },
+"favorites" :
+    {"user_uid":{
+        "activity_id" : false}
+    }
+}
